@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/calculator_screen.dart'; // Nayi file ko link kiya
+import 'screens/calculator_screen.dart';
 
 void main() {
   runApp(const CalculatorApp());
