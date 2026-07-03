@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For haptic feedback
-import 'package:math_expressions/math_expressions.dart'; // For math logic
-import 'package:intl/intl.dart'; // For formatting numbers with commas
+import 'package:flutter/services.dart';
+import 'package:math_expressions/math_expressions.dart';
+import 'package:intl/intl.dart';
 
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key});
@@ -13,6 +13,8 @@ class CalculatorScreen extends StatefulWidget {
 class _CalculatorScreenState extends State<CalculatorScreen> {
   var userInput = '';
   var answer = '0';
+  bool isCalculated =
+      false; // Yeh naya variable track karega ki '=' press hua ya nahi
 
   final List<String> buttons = [
     'C',
@@ -40,9 +42,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(
-        0xFF121212,
-      ), // Theme Color 1: Very Dark Grey Background
+      backgroundColor: const Color(0xFF121212),
       body: Column(
         children: [
           // --- DISPLAY AREA ---
@@ -55,11 +55,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Scrollable Input Area to prevent Overflow Error
                   Expanded(
                     child: SingleChildScrollView(
-                      reverse:
-                          true, // Automatically scrolls to show the latest typed number
+                      reverse: true,
                       child: Container(
                         alignment: Alignment.bottomRight,
                         child: Text(
@@ -74,17 +72,21 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Auto-Shrinking Answer Area
+
+                  // --- THE POP-OUT ANIMATION EFFECT ---
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
-                    child: Text(
-                      answer,
-                      style: const TextStyle(
-                        fontSize: 56,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: TextStyle(
+                        fontSize: isCalculated ? 56 : 32,
+                        fontWeight: isCalculated
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isCalculated ? Colors.white : Colors.white38,
                       ),
+                      child: Text(answer),
                     ),
                   ),
                 ],
@@ -138,7 +140,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  // --- LOGIC FUNCTIONS ---
   // --- BUTTON LOGIC ---
   void _onButtonPressed(String buttonText) {
     HapticFeedback.lightImpact();
@@ -147,39 +148,39 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       if (buttonText == 'C') {
         userInput = '';
         answer = '0';
+        isCalculated = false;
       } else if (buttonText == 'DEL') {
         if (userInput.isNotEmpty) {
           userInput = userInput.substring(0, userInput.length - 1);
         }
-        _calculateLivePreview(); // Update preview on delete
+        isCalculated = false;
+        _calculateLivePreview();
       } else if (buttonText == '=') {
-        _calculateMath(isFinal: true); // Show final answer
+        _calculateMath(isFinal: true);
       } else {
-        // --- BUG FIX: Prevent multiple operators (e.g., ++ or +x) ---
         if (_isOperator(buttonText)) {
           if (userInput.isNotEmpty) {
             String lastChar = userInput[userInput.length - 1];
             if (_isOperator(lastChar)) {
-              // Agar last character bhi operator tha, toh usko naye wale se replace kar do
               userInput =
                   userInput.substring(0, userInput.length - 1) + buttonText;
+              isCalculated = false;
               return;
             }
           }
         }
 
         userInput += buttonText;
-        _calculateLivePreview(); // Update preview as user types
+        isCalculated = false;
+        _calculateLivePreview();
       }
     });
   }
 
-  // Helper method to check if character is operator
   bool _isOperator(String x) {
     return x == '+' || x == '-' || x == 'x' || x == '/' || x == '%';
   }
 
-  // --- LIVE PREVIEW LOGIC ---
   void _calculateLivePreview() {
     try {
       if (userInput.isEmpty) {
@@ -187,7 +188,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         return;
       }
 
-      // Agar last character operator hai, toh preview mat dikhao (wait for number)
       if (_isOperator(userInput[userInput.length - 1])) {
         return;
       }
@@ -203,36 +203,33 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       } else {
         answer = NumberFormat.decimalPattern('en_US').format(eval);
       }
-    } catch (e) {
-      // Live preview mein agar expression incomplete hai, toh error mat dikhao
+    } catch (e) {}
+  }
+
+  void _calculateMath({bool isFinal = false}) {
+    _calculateLivePreview();
+    if (isFinal) {
+      setState(() {
+        isCalculated = true;
+      });
     }
   }
 
-  // --- FINAL EQUAL BUTTON LOGIC ---
-  void _calculateMath({bool isFinal = false}) {
-    _calculateLivePreview();
-  }
-
-  // --- UI THEME HELPER FUNCTIONS ---
   Color _getButtonColor(String x) {
     if (x == 'C' || x == 'DEL') {
-      return const Color(
-        0xFFD32F2F,
-      ); // Theme Color 2: Muted Red for Clear/Delete
+      return const Color(0xFFD32F2F);
     } else if (x == '=' ||
         x == '+' ||
         x == '-' ||
         x == 'x' ||
         x == '/' ||
         x == '%') {
-      return const Color(
-        0xFF1976D2,
-      ); // Theme Color 3: Professional Blue for Operators
+      return const Color(0xFF1976D2);
     }
-    return const Color(0xFF1E1E1E); // Basic Dark Grey for Numbers
+    return const Color(0xFF1E1E1E);
   }
 
   Color _getTextColor(String x) {
-    return Colors.white; // Uniform white text for readability
+    return Colors.white;
   }
 }
